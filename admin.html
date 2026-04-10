@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Admin Dashboard</h2>
+  <div class="line"><span>Total itilizatè</span><strong>{{ total_users }}</strong></div>
+  <div class="line"><span>Total ride</span><strong>{{ total_rides }}</strong></div>
+  <div class="line"><span>Total abònman</span><strong>{{ total_subscriptions }}</strong></div>
+  <div class="line"><span>Abònman aktif</span><strong>{{ active_subscriptions }}</strong></div>
+  <div class="line"><span>Total revni</span><strong>${{ total_revenue }}</strong></div>
+  <div class="line"><span>Revni app la</span><strong>${{ total_platform_revenue }}</strong></div>
+  <div class="line"><span>Total pou chofè yo</span><strong>${{ total_driver_payouts }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Itilizatè yo</h2>
+  {% for u in users %}
+    <div class="ride-card">
+      <div class="line">
+        <span>{{ u["username"] }} ({{ u["role"] }})</span>
+        <strong>{{ u["phone"] or "" }}</strong>
+      </div>
+
+      {% if u["username"] != "kervens2004" %}
+      <form method="POST" action="/admin/delete-user/{{ u['id'] }}">
+        <button class="btn gray" type="submit">Efase itilizatè</button>
+      </form>
+      {% else %}
+      <div class="muted">Sa a se kont admin ou.</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Ride yo</h2>
+  {% for ride in rides %}
+    <div class="ride-card">
+      <div class="line">
+        <span>{{ ride["work_address"] }} → {{ ride["home_city"] }}</span>
+        <strong>{{ ride["driver_name"] or "Chofè" }}</strong>
+      </div>
+
+      <form method="POST" action="/admin/delete-ride/{{ ride['id'] }}">
+        <button class="btn gray" type="submit">Retire ride la</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Abònman yo</h2>
+  {% for sub in subscriptions %}
+    <div class="ride-card">
+      <div class="line">
+        <span>{{ sub["passenger_name"] or "Pasajè" }}</span>
+        <strong>{{ sub["status"] }}</strong>
+      </div>
+      <div class="line">
+        <span>Route</span>
+        <strong>{{ sub["work_address"] }} → {{ sub["home_city"] }}</strong>
+      </div>
+      <div class="line">
+        <span>Pwochen peman</span>
+        <strong>{{ sub["next_payment_date"] }}</strong>
+      </div>
+
+      {% if sub["status"] != "cancelled" %}
+      <form method="POST" action="/admin/cancel-subscription/{{ sub['id'] }}">
+        <button class="btn gray" type="submit">Anile abònman</button>
+      </form>
+      {% else %}
+      <div class="muted">Abònman sa deja anile.</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

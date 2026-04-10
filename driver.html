@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card navcard">
+  <a class="smallbtn" href="/driver">Dashboard</a>
+  <a class="smallbtn" href="/driver/profile">Profil mwen</a>
+  <a class="smallbtn" href="/logout">Dekonekte</a>
+</div>
+
+<div class="card">
+  <h2>Rezime chofè</h2>
+  <div class="line"><span>Total pasajè</span><strong>{{ total_passengers }}</strong></div>
+  <div class="line"><span>Lajan ou resevwa</span><strong>${{ total_driver_earnings }}</strong></div>
+  <div class="line"><span>Frè app la</span><strong>${{ total_platform_fees }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Ajoute ride</h2>
+  <form method="POST">
+    <label>Adrès travay ou</label>
+    <input name="work" />
+    <label>Vil ou rete</label>
+    <input name="home" />
+    <label>Lè pickup</label>
+    <input name="pickup_time" />
+    <label>Orè</label>
+    <input name="schedule" />
+    <label>Nimewo telefòn chofè a</label>
+    <input name="driver_phone" />
+    <button class="btn blue" type="submit">Ajoute ride la</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Ride mwen yo</h2>
+  {% for ride in rides %}
+  <div class="ride-card">
+    <div class="ride-route"><strong>{{ ride["work_address"] }} → {{ ride["home_city"] }}</strong></div>
+    <div class="line"><span>Lè depa</span><strong>{{ ride["pickup_time"] }}</strong></div>
+    <div class="line"><span>Orè</span><strong>{{ ride["schedule"] }}</strong></div>
+    <div class="line"><span>Telefòn</span><strong>{{ ride["driver_phone"] }}</strong></div>
+    <div class="line"><span>Pasajè sou ride la</span><strong>{{ ride["passenger_count"] }}</strong></div>
+    <div class="line"><span>Lajan ride sa</span><strong>${{ ride["passenger_count"] * DRIVER_PAYOUT }}</strong></div>
+    <a class="btn gray" href="/delete-ride/{{ ride['id'] }}">Retire ride la</a>
+
+    {% set plist = passengers_by_ride[ride['id']] %}
+    {% if plist %}
+      <div class="subhead">Pasajè sou ride sa a</div>
+      {% for p in plist %}
+        <div class="line">
+          <span>{{ p["full_name"] or "Pasajè" }}</span>
+          <strong>{{ p["phone"] or "" }}</strong>
+        </div>
+        <div class="line">
+          <span>Estati</span>
+          <strong>{{ p["status"] }}</strong>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="muted">Pa gen pasajè sou ride sa a ankò.</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="muted">Ou poko ajoute okenn ride.</p>
+  {% endfor %}
+</div>
+{% endblock %}

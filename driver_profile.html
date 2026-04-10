@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card navcard">
+  <a class="smallbtn" href="/driver">Dashboard</a>
+  <a class="smallbtn" href="/driver/profile">Profil mwen</a>
+  <a class="smallbtn" href="/logout">Dekonekte</a>
+</div>
+<div class="card">
+  <h2>Profil Chofè</h2>
+  <form method="POST">
+    <label>Non konplè</label><input name="full_name" value="{{ user['full_name'] }}" />
+    <label>Telefòn</label><input name="phone" value="{{ user['phone'] }}" />
+    <label>Vil ou rete</label><input name="city" value="{{ user['city'] }}" />
+    <label>Adrès travay ou</label><input name="work_address" value="{{ user['work_address'] }}" />
+    <label>Non bank la</label><input name="bank_name" value="{{ user['bank_name'] }}" />
+    <label>Non sou kont la</label><input name="account_holder" value="{{ user['account_holder'] }}" />
+    <label>Nimewo kont la</label><input name="account_number" value="{{ user['account_number'] }}" />
+    <label>Routing number</label><input name="routing_number" value="{{ user['routing_number'] }}" />
+    <button class="btn green" type="submit">Sove profil chofè a</button>
+  </form>
+  <div class="summary-box">
+    <div class="line"><span>Bank</span><strong>{{ user['bank_name'] or 'Pa mete ankò' }}</strong></div>
+    <div class="line"><span>Non sou kont</span><strong>{{ user['account_holder'] or 'Pa mete ankò' }}</strong></div>
+    <div class="line"><span>Nimewo kont</span><strong>{{ mask_account(user['account_number']) or 'Pa mete ankò' }}</strong></div>
+    <div class="line"><span>Routing</span><strong>{{ user['routing_number'] or 'Pa mete ankò' }}</strong></div>
+  </div>
+</div>
+{% endblock %}
+<label>Stripe Account ID</label>
+<input type="text" name="stripe_account_id" value="{{ user['stripe_account_id'] or '' }}">

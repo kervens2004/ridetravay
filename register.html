@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Kreye kont</h2>
+  <form method="POST">
+    <label>Non konplè</label><input name="full_name" />
+    <label>Telefòn</label><input name="phone" />
+    <label>Non itilizatè</label><input name="username" />
+    <label>Modpas</label><input name="password" type="password" />
+    <label>Wòl</label>
+    <select name="role">
+      <option value="passenger">Pasajè</option>
+      <option value="driver">Chofè</option>
+    </select>
+    <button class="btn green" type="submit">Kreye kont</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card navcard">
+  <a class="smallbtn" href="/passenger">Dashboard</a>
+  <a class="smallbtn" href="/passenger/profile">Profil mwen</a>
+  <a class="smallbtn" href="/logout">Dekonekte</a>
+</div>
+<div class="card">
+  <h2>Profil Pasajè</h2>
+  <form method="POST">
+    <label>Non konplè</label><input name="full_name" value="{{ user['full_name'] }}" />
+    <label>Telefòn</label><input name="phone" value="{{ user['phone'] }}" />
+    <label>Vil ou rete</label><input name="city" value="{{ user['city'] }}" />
+    <label>Adrès travay ou</label><input name="work_address" value="{{ user['work_address'] }}" />
+    <button class="btn blue" type="submit">Sove profil la</button>
+  </form>
+</div>
+{% endblock %}

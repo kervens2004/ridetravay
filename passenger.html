@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card navcard">
+  <a class="smallbtn" href="/passenger">Dashboard</a>
+  <a class="smallbtn" href="/passenger/profile">Profil mwen</a>
+  <a class="smallbtn" href="/logout">Dekonekte</a>
+</div>
+
+{% if active_sub %}
+<div class="card">
+  <h2>Plan mwen aktif</h2>
+  <div class="line"><span>Route</span><strong>{{ active_sub["work_address"] }} → {{ active_sub["home_city"] }}</strong></div>
+  <div class="line"><span>Lè depa</span><strong>{{ active_sub["pickup_time"] }}</strong></div>
+  <div class="line"><span>Orè</span><strong>{{ active_sub["schedule"] }}</strong></div>
+  <div class="line"><span>Chofè</span><strong>{{ active_sub["driver_name"] or "Chofè" }}</strong></div>
+  <div class="line"><span>Nimewo chofè</span><strong>{{ active_sub["driver_phone"] }}</strong></div>
+  <div class="line"><span>Estati</span><strong>{{ active_sub["status"] }}</strong></div>
+  <div class="line"><span>Pwochen peman</span><strong>{{ active_sub["next_payment_date"] }}</strong></div>
+
+  <a class="btn gray" href="/stripe-cancel-subscription">Anile plan an</a>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Chèche ride</h2>
+  <form method="GET">
+    <label>Adrès travay ou</label>
+    <input name="work_address" value="{{ filters['work_address'] }}" />
+    <label>Vil ou rete</label>
+    <input name="home_city" value="{{ filters['home_city'] }}" />
+    <label>Lè pickup</label>
+    <input name="pickup_time" value="{{ filters['pickup_time'] }}" />
+    <label>Orè</label>
+    <input name="schedule" value="{{ filters['schedule'] }}" />
+    <button class="btn blue" type="submit">Chèche</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Ride disponib</h2>
+  {% for ride in rides %}
+  <div class="ride-card">
+    <div class="ride-route"><strong>{{ ride["work_address"] }} → {{ ride["home_city"] }}</strong></div>
+    <div class="line"><span>Lè depa</span><strong>{{ ride["pickup_time"] }}</strong></div>
+    <div class="line"><span>Orè</span><strong>{{ ride["schedule"] }}</strong></div>
+    <div class="line"><span>Plas ki rete</span><strong>{{ ride["seats"] }}</strong></div>
+    <div class="line"><span>Plan chak semèn</span><strong>${{ WEEKLY_PRICE }}</strong></div>
+    <div class="muted">Detay chofè a ap disponib apre ou aktive plan an.</div>
+
+    <form method="POST" action="/create-checkout-session/{{ ride['id'] }}">
+      <button class="btn green" type="submit">Aktive plan mwen</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="muted">Pa gen ride disponib kounya.</p>
+  {% endfor %}
+</div>
+{% endblock %}

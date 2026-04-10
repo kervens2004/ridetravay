@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Plan ou aktif ✅</h2>
+  <div class="line"><span>Route</span><strong>{{ ride["work_address"] }} → {{ ride["home_city"] }}</strong></div>
+  <div class="line"><span>Lè depa</span><strong>{{ ride["pickup_time"] }}</strong></div>
+  <div class="line"><span>Nimewo chofè</span><strong>{{ ride["driver_phone"] }}</strong></div>
+  <div class="notice ok">Premye semèn gratis.</div>
+  <div class="line"><span>Pwochen peman otomatik</span><strong>{{ next_payment }}</strong></div>
+  <p class="muted">Peman ap kòmanse otomatikman apre 7 jou. Plan an ap koute $80 pa semèn.</p>
+  <a class="btn blue" href="/passenger">Ale sou dashboard mwen</a>
+</div>
+{% endblock %}
