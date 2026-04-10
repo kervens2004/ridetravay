@@ -854,6 +854,24 @@ def admin_cancel_subscription(sub_id):
 def plan_active():
     return render_template("plan_active.html")
 
+@app.route("/connect-driver")
+def connect_driver():
+    import stripe
+    import os
+    from flask import redirect
 
+    stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
+    account = stripe.Account.create(type="express")
+
+    account_link = stripe.AccountLink.create(
+        account=account.id,
+        refresh_url=os.environ.get("APP_BASE_URL"),
+        return_url=os.environ.get("APP_BASE_URL"),
+        type="account_onboarding",
+    )
+
+    return redirect(account_link.url)
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
