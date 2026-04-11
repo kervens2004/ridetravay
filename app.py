@@ -374,7 +374,6 @@ def checkout_cancel():
 
 
 @app.route("/webhook", methods=["POST"])
-@app.route("/webhook", methods=["POST"])
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.data
@@ -397,12 +396,12 @@ def stripe_webhook():
     if event["type"] == "checkout.session.completed":
         obj = event["data"]["object"]
 
-        metadata = obj.get("metadata", {}) or {}
+        metadata = obj.metadata or {}
         passenger_id = int(metadata.get("passenger_id", 0)) if metadata.get("passenger_id") else None
         ride_id = int(metadata.get("ride_id", 0)) if metadata.get("ride_id") else None
 
-        stripe_customer_id = obj.get("customer")
-        stripe_subscription_id = obj.get("subscription")
+        stripe_customer_id = obj.customer
+        stripe_subscription_id = obj.subscription
 
         if passenger_id and ride_id:
             ride = db.execute(
@@ -415,7 +414,7 @@ def stripe_webhook():
                 WHERE passenger_id=? AND stripe_checkout_session_id=?
                 ORDER BY id DESC
                 LIMIT 1
-            """, (passenger_id, obj["id"])).fetchone()
+            """, (passenger_id, obj.id)).fetchone()
 
             if ride and sub and ride["seats"] > 0:
                 db.execute(
@@ -439,7 +438,7 @@ def stripe_webhook():
 
     elif event["type"] == "invoice.paid":
         obj = event["data"]["object"]
-        stripe_subscription_id = obj.get("subscription")
+        stripe_subscription_id = obj.subscription
 
         if stripe_subscription_id:
             db.execute("""
@@ -452,8 +451,8 @@ def stripe_webhook():
 
     elif event["type"] == "customer.subscription.updated":
         obj = event["data"]["object"]
-        stripe_subscription_id = obj["id"]
-        cancel_at_period_end = obj.get("cancel_at_period_end", False)
+        stripe_subscription_id = obj.id
+        cancel_at_period_end = obj.cancel_at_period_end
 
         db.execute("""
             UPDATE subscriptions
@@ -467,7 +466,7 @@ def stripe_webhook():
 
     elif event["type"] == "customer.subscription.deleted":
         obj = event["data"]["object"]
-        stripe_subscription_id = obj["id"]
+        stripe_subscription_id = obj.id
 
         sub = db.execute("""
             SELECT * FROM subscriptions
@@ -854,12 +853,9 @@ def admin_cancel_subscription(sub_id):
 def plan_active():
     return render_template("plan_active.html")
 
+
 @app.route("/connect-driver")
 def connect_driver():
-    import stripe
-    import os
-    from flask import redirect
-
     stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
     account = stripe.Account.create(type="express")
@@ -872,6 +868,7 @@ def connect_driver():
     )
 
     return redirect(account_link.url)
-    
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
