@@ -376,6 +376,7 @@ def checkout_cancel():
 @app.route("/webhook", methods=["POST"])
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
+
     payload = request.data
     sig_header = request.headers.get("Stripe-Signature")
 
@@ -388,106 +389,157 @@ def stripe_webhook():
             sig_header,
             STRIPE_WEBHOOK_SECRET
         )
-    except Exception:
+    except Exception as e:
+        print("Webhook signature error:", str(e))
         return "Invalid webhook", 400
 
     db = get_db()
 
-    if event["type"] == "checkout.session.completed":
-        obj = event["data"]["object"]
+    try:
 
-        metadata = obj.metadata or {}
-        passenger_id = int(metadata.get("passenger_id", 0)) if metadata.get("passenger_id") else None
-        ride_id = int(metadata.get("ride_id", 0)) if metadata.get("ride_id") else None
+        # =========================
+        # CHECKOUT COMPLETED EVENT
+        # =========================
 
-        stripe_customer_id = obj.customer
-        stripe_subscription_id = obj.subscription
+        if event["type"] == "checkout.session.completed":
 
-        if passenger_id and ride_id:
-            ride = db.execute(
-                "SELECT * FROM rides WHERE id=? AND status='active'",
-                (ride_id,)
-            ).fetchone()
+            obj = event["data"]["object"]
 
-            sub = db.execute("""
-                SELECT * FROM subscriptions
-                WHERE passenger_id=? AND stripe_checkout_session_id=?
-                ORDER BY id DESC
-                LIMIT 1
-            """, (passenger_id, obj.id)).fetchone()
+            metadata = obj.get("metadata", {}) or {}
 
-            if ride and sub and ride["seats"] > 0:
-                db.execute(
-                    "UPDATE rides SET seats = seats - 1 WHERE id=?",
+            passenger_id = int(metadata.get("passenger_id", 0))
+            ride_id = int(metadata.get("ride_id", 0))
+
+            stripe_customer_id = obj.get("customer", "")
+            stripe_subscription_id = obj.get("subscription", "")
+
+            if passenger_id and ride_id:
+
+                ride = db.execute(
+                    "SELECT * FROM rides WHERE id=? AND status='active'",
                     (ride_id,)
-                )
+                ).fetchone()
+
+                sub = db.execute("""
+                    SELECT *
+                    FROM subscriptions
+                    WHERE passenger_id=?
+                    AND stripe_checkout_session_id=?
+                    ORDER BY id DESC
+                    LIMIT 1
+                """, (passenger_id, obj["id"])).fetchone()
+
+                if ride and sub and ride["seats"] > 0:
+
+                    db.execute(
+                        "UPDATE rides SET seats = seats - 1 WHERE id=?",
+                        (ride_id,)
+                    )
+
+                    db.execute("""
+                        UPDATE subscriptions
+                        SET status='first_week_free',
+                            stripe_customer_id=?,
+                            stripe_subscription_id=?,
+                            start_date=date('now'),
+                            next_payment_date=date('now', '+7 day')
+                        WHERE id=?
+                    """, (
+                        stripe_customer_id,
+                        stripe_subscription_id,
+                        sub["id"],
+                    ))
+
+                    db.commit()
+
+
+        # =========================
+        # WEEKLY PAYMENT SUCCESS
+        # =========================
+
+        elif event["type"] == "invoice.payment_succeeded":
+
+            obj = event["data"]["object"]
+
+            stripe_subscription_id = obj.get("subscription")
+
+            if stripe_subscription_id:
+
                 db.execute("""
                     UPDATE subscriptions
-                    SET status='first_week_free',
-                        stripe_customer_id=?,
-                        stripe_subscription_id=?,
-                        start_date=date('now'),
-                        next_payment_date=date('now', '+7 day')
-                    WHERE id=?
-                """, (
-                    stripe_customer_id or "",
-                    stripe_subscription_id or "",
-                    sub["id"],
-                ))
+                    SET status='active_paid',
+                        next_payment_date=date(next_payment_date, '+7 day')
+                    WHERE stripe_subscription_id=?
+                """, (stripe_subscription_id,))
+
                 db.commit()
 
-    elif event["type"] == "invoice.paid":
-        obj = event["data"]["object"]
-        stripe_subscription_id = obj.subscription
 
-        if stripe_subscription_id:
+        # =========================
+        # SUBSCRIPTION UPDATED
+        # =========================
+
+        elif event["type"] == "customer.subscription.updated":
+
+            obj = event["data"]["object"]
+
+            stripe_subscription_id = obj.get("id")
+
+            cancel_at_period_end = obj.get("cancel_at_period_end", False)
+
             db.execute("""
                 UPDATE subscriptions
-                SET status='active_paid',
-                    next_payment_date=date(next_payment_date, '+7 day')
+                SET status=?
                 WHERE stripe_subscription_id=?
-            """, (stripe_subscription_id,))
+            """, (
+                "cancel_pending" if cancel_at_period_end else "active_paid",
+                stripe_subscription_id,
+            ))
+
             db.commit()
 
-    elif event["type"] == "customer.subscription.updated":
-        obj = event["data"]["object"]
-        stripe_subscription_id = obj.id
-        cancel_at_period_end = obj.cancel_at_period_end
 
-        db.execute("""
-            UPDATE subscriptions
-            SET status=?
-            WHERE stripe_subscription_id=?
-        """, (
-            "cancel_pending" if cancel_at_period_end else "active_paid",
-            stripe_subscription_id,
-        ))
-        db.commit()
+        # =========================
+        # SUBSCRIPTION CANCELLED
+        # =========================
 
-    elif event["type"] == "customer.subscription.deleted":
-        obj = event["data"]["object"]
-        stripe_subscription_id = obj.id
+        elif event["type"] == "customer.subscription.deleted":
 
-        sub = db.execute("""
-            SELECT * FROM subscriptions
-            WHERE stripe_subscription_id=?
-            ORDER BY id DESC
-            LIMIT 1
-        """, (stripe_subscription_id,)).fetchone()
+            obj = event["data"]["object"]
 
-        if sub:
-            db.execute(
-                "UPDATE subscriptions SET status='cancelled' WHERE id=?",
-                (sub["id"],)
-            )
-            db.execute(
-                "UPDATE rides SET seats = seats + 1 WHERE id=?",
-                (sub["ride_id"],)
-            )
-            db.commit()
+            stripe_subscription_id = obj.get("id")
+
+            sub = db.execute("""
+                SELECT *
+                FROM subscriptions
+                WHERE stripe_subscription_id=?
+                ORDER BY id DESC
+                LIMIT 1
+            """, (stripe_subscription_id,)).fetchone()
+
+            if sub:
+
+                db.execute(
+                    "UPDATE subscriptions SET status='cancelled' WHERE id=?",
+                    (sub["id"],)
+                )
+
+                db.execute(
+                    "UPDATE rides SET seats = seats + 1 WHERE id=?",
+                    (sub["ride_id"],)
+                )
+
+                db.commit()
+
+
+    except Exception as e:
+
+        print("Webhook runtime error:", str(e))
+
+        return "Webhook processing failed", 500
+
 
     return "ok", 200
-
 
 @app.route("/stripe-cancel-subscription")
 def stripe_cancel_subscription():
