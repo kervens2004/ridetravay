@@ -394,18 +394,14 @@ def stripe_webhook():
 
     try:
 
-        event_type = event.get("type")
-        obj = event.get("data", {}).get("object", {})
+        event_type = event["type"]
+        obj = event["data"]["object"]
 
         print("Webhook received:", event_type)
 
-        # ======================
-        # CHECKOUT COMPLETED
-        # ======================
-
         if event_type == "checkout.session.completed":
 
-            metadata = obj.get("metadata", {})
+            metadata = obj.get("metadata", {}) or {}
 
             passenger_id = metadata.get("passenger_id")
             ride_id = metadata.get("ride_id")
@@ -456,11 +452,6 @@ def stripe_webhook():
 
                     db.commit()
 
-
-        # ======================
-        # WEEKLY PAYMENT SUCCESS
-        # ======================
-
         elif event_type == "invoice.payment_succeeded":
 
             stripe_subscription_id = obj.get("subscription")
@@ -475,11 +466,6 @@ def stripe_webhook():
                 """, (stripe_subscription_id,))
 
                 db.commit()
-
-
-        # ======================
-        # SUBSCRIPTION UPDATED
-        # ======================
 
         elif event_type == "customer.subscription.updated":
 
@@ -496,11 +482,6 @@ def stripe_webhook():
             ))
 
             db.commit()
-
-
-        # ======================
-        # SUBSCRIPTION CANCELLED
-        # ======================
 
         elif event_type == "customer.subscription.deleted":
 
@@ -530,11 +511,11 @@ def stripe_webhook():
 
     except Exception as e:
 
-        print("Webhook processing crash:", e)
-        return "Webhook error", 500
-
+        print("Webhook runtime crash:", e)
+        return "Webhook processing failed", 500
 
     return "ok", 200
+    
 @app.route("/stripe-cancel-subscription")
 def stripe_cancel_subscription():
     if not require_login():
